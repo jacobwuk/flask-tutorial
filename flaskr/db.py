@@ -1,4 +1,5 @@
 import sqlite3
+# A package that allows us to define command line commands
 import click
 # current_app is an object pointing to the Flask object making the request
 # g is an object for the request (unique),
@@ -7,7 +8,7 @@ if get_db called
 from flask import current_app, g
 from falsk.cli import with_appcontext
 
-# establish a connection with the database 
+# establish a connection with the database
 def get_db():
     if 'db' not in g:
         # connect to the DATABASE config key
@@ -26,3 +27,27 @@ def close_db(e=None):
 
     if db is not None:
         db.close()
+
+
+def init_db():
+    db = get_db()
+    # open schema file (@ path with reference to the current)
+    # then read and execute the commands there (ie, create tables from the data)
+    with current_app.open_resource('schema.sql') as f:
+        db.executescript(f.read().decode('utf8'))
+
+# create a command line command (using Click package bundled in Flask)
+@click.command('init_db')
+@with_appcontext
+def init_db_command():
+    """Clear the existing data and create new tables."""
+    init_db()
+    # output to terminal via Click
+    click.echo('Initialized the database.')
+
+def init_app(app):
+    # link a call to close_db when the context for the app ends
+    app.teardown_appcontext(close_db)
+    # add an additional command: flask init_db_command
+    # can add a comma to specify the name (defaults to the command)
+    app.cli.add_command(init_db_command)
